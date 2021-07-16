@@ -312,6 +312,14 @@ static int macsec_sonic_set_current_cipher_suite(void *priv, u64 cs)
     {
         cipher_suite = "GCM-AES-256";
     }
+    else if (cs == CS_ID_GCM_AES_XPN_128)
+    {
+        cipher_suite = "GCM-AES-XPN-128";
+    }
+    else if (cs == CS_ID_GCM_AES_XPN_256)
+    {
+        cipher_suite = "GCM-AES-XPN-256";
+    }
     else
     {
         return SONIC_DB_FAIL;
@@ -575,6 +583,8 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
     char * sak = create_binary_hex(sa->pkey->key, sa->pkey->key_len);
     char * pn = create_buffer("%" PRIu64 "", sa->lowest_pn);
     char * auth_key = create_auth_key(sa->pkey->key, sa->pkey->key_len);
+    char * ssci = create_buffer("%u", sa->sc->ssci);
+    char * salt = create_binary_hex(&sa->pkey->salt, sizeof(sa->pkey->salt));
     PRINT_LOG("%s (enable_receive=%d next_pn=%" PRIu64 ") %s %s",
         key,
         sa->enable_receive,
@@ -582,16 +592,14 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
         sak_id,
         sak);
 
-    // TODO
-    // SALT
     const struct sonic_db_name_value_pair pairs[] = 
     {
         {"active", "false"},
         {"sak", sak},
         {"auth_key", auth_key},
         {"lowest_acceptable_pn", pn},
-        {"salt", ""},
-        {"ssci", ""}
+        {"ssci", ssci},
+        {"salt", salt}
     };
     int ret = sonic_db_set(
         drv->sonic_manager,
@@ -604,6 +612,8 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
     free(sak);
     free(pn);
     free(auth_key);
+    free(ssci);
+    free(salt);
     return ret;
 }
 
@@ -811,6 +821,8 @@ static int macsec_sonic_create_transmit_sa(void *priv, struct transmit_sa *sa)
     char * sak = create_binary_hex(sa->pkey->key, sa->pkey->key_len);
     char * pn = create_buffer("%" PRIu64 "", sa->next_pn);
     char * auth_key = create_auth_key(sa->pkey->key, sa->pkey->key_len);
+    char * ssci = create_buffer("%u", sa->sc->ssci);
+    char * salt = create_binary_hex(&sa->pkey->salt, sizeof(sa->pkey->salt));
     PRINT_LOG("%s (enable_receive=%d next_pn=%" PRIu64 ") %s %s",
         key,
         sa->enable_transmit,
@@ -818,15 +830,13 @@ static int macsec_sonic_create_transmit_sa(void *priv, struct transmit_sa *sa)
         sak_id,
         sak);
 
-    // TODO
-    // SALT
     const struct sonic_db_name_value_pair pairs[] = 
     {
         {"sak", sak},
         {"auth_key", auth_key},
         {"next_pn", pn},
-        {"salt", ""},
-        {"ssci", ""}
+        {"ssci", ssci},
+        {"salt", salt}
     };
     int ret = sonic_db_set(
         drv->sonic_manager,
@@ -839,6 +849,8 @@ static int macsec_sonic_create_transmit_sa(void *priv, struct transmit_sa *sa)
     free(sak);
     free(pn);
     free(auth_key);
+    free(ssci);
+    free(salt);
 
     return ret;
 }
